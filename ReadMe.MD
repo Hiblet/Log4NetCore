@@ -129,14 +129,14 @@ In your controller or class that you wish to log from:
 
  - In a member function you wish to log from, get a reference to the static instance of the logger, and call the standard Log4Net log function on it.   
  
-      private void Boom()
-      {
-          string wouldLogThis = "BOOM!!!";
+       private void Boom()
+       {
+           string wouldLogThis = "BOOM!!!";
           
-          NZ01.Log4NetAsyncLog directLog = NZ01.Log4NetAsyncLog.GetLog4NetAsyncLogByName("App");
-          
-          directLog?.Debug(wouldLogThis); 
-      }
+           NZ01.Log4NetAsyncLog directLog = NZ01.Log4NetAsyncLog.GetLog4NetAsyncLogByName("App");
+           
+           directLog?.Debug(wouldLogThis); 
+       }
 
 
 
