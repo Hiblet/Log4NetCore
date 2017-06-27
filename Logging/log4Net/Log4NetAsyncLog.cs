@@ -10,6 +10,7 @@ using System.Reflection; // Assembly
 
 using System.Collections.Concurrent;
 using System.Threading;
+using System.IO;
 
 namespace NZ01
 {
@@ -47,89 +48,67 @@ namespace NZ01
 
         // Static Members
         private static string _dateTimeFormatter = "HH:mm:ss.fff";
-        private static ConcurrentDictionary<string, Log4NetAsyncLog> _registry = new ConcurrentDictionary<string, Log4NetAsyncLog>();
 
-        // Instance Members
-        private log4net.ILog _logger;
+        private static log4net.ILog _logger;
 
-        private Thread _thread;
-        private bool _running = true;
-        private AutoResetEvent _eventThreadExit = new AutoResetEvent(false);
-        private AutoResetEvent _eventThreadAction = new AutoResetEvent(false);
-        private int _waitTimeout = 1000; // 1 second - Effects responsiveness to shutdown
+        private static Thread _thread;
+        private static bool _running = true;
+        private static AutoResetEvent _eventThreadExit = new AutoResetEvent(false);
+        private static AutoResetEvent _eventThreadAction = new AutoResetEvent(false);
+        private static int _waitTimeout = 1000; // 1 second - Effects responsiveness to shutdown
 
-        private string _name = "NAME_NOT_DEFINED";
-        private readonly XmlElement _xmlElement;
-        private ILoggerRepository _loggerRepository;
-
-        private bool _bConsoleWrite = false;
-
-        private ConcurrentQueue<Log4NetAsyncQueueWrapper> _queue = new ConcurrentQueue<Log4NetAsyncQueueWrapper>();
+        private static ConcurrentQueue<Log4NetAsyncQueueWrapper> _queue = new ConcurrentQueue<Log4NetAsyncQueueWrapper>();
         private static string _qSizeFormatter = "D8";
 
-        private int _thresholdLevelWarn = 10000; // Warn but accept messages if this number of messages is on the queue
-        private bool _bLevelWarnPassed = false;
-        private int _thresholdLevelError = 1000000; // Error and reject messages if this number of messages is on the queue
-        private bool _bLevelErrorPassed = false;
+        private static int _thresholdLevelWarn = 10000; // Warn but accept messages if this number of messages is on the queue
+        private static bool _bLevelWarnPassed = false;
+        private static int _thresholdLevelError = 1000000; // Error and reject messages if this number of messages is on the queue
+        private static bool _bLevelErrorPassed = false;
 
-        // Instance Ctor
-        public Log4NetAsyncLog(string name, XmlElement xmlElement, bool bConsoleWrite = false)
+
+        // Static Ctor
+        static Log4NetAsyncLog()
         {
-            var prefix = "Log4NetAsyncLog() [INSTANCE CTOR] - ";
-            _bConsoleWrite = bConsoleWrite;
+            var prefix = "Log4NetAsyncLog() [STATIC CTOR] - ";
 
-            _name = name;
-            _xmlElement = xmlElement;
-            _loggerRepository = log4net.LogManager.CreateRepository(Assembly.GetEntryAssembly(), typeof(log4net.Repository.Hierarchy.Hierarchy));
+            var loggerRepository = log4net.LogManager.CreateRepository(Assembly.GetEntryAssembly(), typeof(log4net.Repository.Hierarchy.Hierarchy));
 
-            log4net.Config.XmlConfigurator.Configure(_loggerRepository, xmlElement);
-
-            _logger = log4net.LogManager.GetLogger(_loggerRepository.Name, name);
+            var xmlElement = parseLog4NetConfigFile("./Logging/log4Net/log4net.config");
+            if (!loggerRepository.Configured)            
+                log4net.Config.XmlConfigurator.Configure(loggerRepository, xmlElement);
+            
+            _logger = log4net.LogManager.GetLogger(loggerRepository.Name,"App");
 
             setQSizeFormatter();
 
-            _registry.GetOrAdd(name, this); // record this log file for direct access
-
             _thread = new Thread(new ThreadStart(RunThread));
-            _thread.Name = name;
+            _thread.Name = "Log4Net";
 
-            _logger.Info(prefix + $"About to start {name} logging Thread...");
+            _logger.Info(prefix + $"About to start Logging Thread...");
             _thread.Start();
-            _logger.Info(prefix + $"Thread {name} started...");
+            _logger.Info(prefix + $"Logging Thread started...");
         }
 
-        // Instance Dtor
-        ~Log4NetAsyncLog()
-        {
-            Stop();
-        }
 
-        public void Stop()
+        public static void Stop()
         {
             var prefix = "Stop() - ";
 
             _running = false; // Stops the thread wait infinite loop
 
             if (_eventThreadExit.WaitOne())
-                _logger.Info(prefix + $"Graceful Shutdown - Log Thread [{_name}] has signalled that it has stopped.");
+                _logger.Info(prefix + $"Graceful Shutdown - Log Thread has signalled that it has stopped.");
             else
-                _logger.Info(prefix + $"Bad Shutdown - Log Thread [{_name}] did not signal that it had stopped.");
+                _logger.Info(prefix + $"Bad Shutdown - Log Thread did not signal that it had stopped.");
         }
 
 
-        public static Log4NetAsyncLog GetLog4NetAsyncLogByName(string name)
-        {
-            Log4NetAsyncLog target = null;
-            if (_registry.TryGetValue(name, out target))
-                return target;
-            return null;
-        }
 
 
         ////////////////////
         // Thread Function
 
-        private void RunThread()
+        private static void RunThread()
         {
             while (_running)
             {
@@ -146,7 +125,14 @@ namespace NZ01
         ///////////////////////
         // Internal Mechanics
 
-        private void consumeQueue()
+        private static XmlElement parseLog4NetConfigFile(string filename)
+        {
+            XmlDocument log4netConfig = new XmlDocument();
+            log4netConfig.Load(File.OpenRead(filename));
+            return log4netConfig["log4net"];
+        }
+
+        private static void consumeQueue()
         {
             Log4NetAsyncQueueWrapper wrapper = null;
             while (_queue.TryDequeue(out wrapper))
@@ -156,7 +142,7 @@ namespace NZ01
         }
 
 
-        private void processQueuedItem(Log4NetAsyncQueueWrapper wrapper, int countQueued)
+        private static void processQueuedItem(Log4NetAsyncQueueWrapper wrapper, int countQueued)
         {
             
             Type tType = wrapper.TStateType;
@@ -201,40 +187,40 @@ namespace NZ01
         }
 
 
-        public bool IsFatalEnabled { get { return _logger.IsFatalEnabled; } }
-        public bool IsDebugEnabled { get { return _logger.IsDebugEnabled; } }
-        public bool IsErrorEnabled { get { return _logger.IsErrorEnabled; } }
-        public bool IsInfoEnabled { get { return _logger.IsInfoEnabled; } }
-        public bool IsWarnEnabled { get { return _logger.IsWarnEnabled; } }
+        public static bool IsFatalEnabled { get { return _logger.IsFatalEnabled; } }
+        public static bool IsDebugEnabled { get { return _logger.IsDebugEnabled; } }
+        public static bool IsErrorEnabled { get { return _logger.IsErrorEnabled; } }
+        public static bool IsInfoEnabled { get { return _logger.IsInfoEnabled; } }
+        public static bool IsWarnEnabled { get { return _logger.IsWarnEnabled; } }
 
-        public void Enqueue(LogLevel loglevel, EventId eventid, object tstate, Exception ex, Delegate formatter, Type tstatetype)
+        public static void Enqueue(LogLevel loglevel, EventId eventid, object tstate, Exception ex, Delegate formatter, Type tstatetype, string name = "!")
         {
             int countQueued = _queue.Count;
             if (checkCapacity(countQueued))
             {
-                Log4NetAsyncQueueWrapper wrapper = new Log4NetAsyncQueueWrapper(loglevel, eventid, tstate, ex, formatter, tstatetype, getEnqueueData());
+                Log4NetAsyncQueueWrapper wrapper = new Log4NetAsyncQueueWrapper(loglevel, eventid, tstate, ex, formatter, tstatetype, getEnqueueData(name));
                 _queue.Enqueue(wrapper);
                 _eventThreadAction.Set();
             }
         }
 
-        public void Fatal(object message, Exception ex = null) { Enqueue(LogLevel.Critical, 0, message, null, null, typeof(String)); } 
-        public void Debug(object message, Exception ex = null) { Enqueue(LogLevel.Debug, 0, message, null, null, typeof(String)); }
-        public void Info(object message, Exception ex = null) { Enqueue(LogLevel.Information, 0, message, null, null, typeof(String)); }
-        public void Warn(object message, Exception ex = null) { Enqueue(LogLevel.Warning, 0, message, null, null, typeof(String)); }
-        public void Error(object message, Exception ex = null) { Enqueue(LogLevel.Error, 0, message, null, null, typeof(String)); }
+        public static void Fatal(object message, Exception ex = null) { Enqueue(LogLevel.Critical, 0, message, null, null, typeof(String)); } 
+        public static void Debug(object message, Exception ex = null) { Enqueue(LogLevel.Debug, 0, message, null, null, typeof(String)); }
+        public static void Info(object message, Exception ex = null) { Enqueue(LogLevel.Information, 0, message, null, null, typeof(String)); }
+        public static void Warn(object message, Exception ex = null) { Enqueue(LogLevel.Warning, 0, message, null, null, typeof(String)); }
+        public static void Error(object message, Exception ex = null) { Enqueue(LogLevel.Error, 0, message, null, null, typeof(String)); }
 
-        private string getEnqueueData()
+        private static string getEnqueueData(string name)
         {
             string sThreadID = string.Format("NQTHR={0},", Thread.CurrentThread.ManagedThreadId.ToString("D3"));
             string sCount = string.Format("NQ={0},", _queue.Count.ToString(_qSizeFormatter));
             string sTime = string.Format("NQUTC={0},", DateTime.UtcNow.ToString(_dateTimeFormatter));
             string sThreadName = (Thread.CurrentThread.Name == null) ? "" : string.Format("THRNM={0},", Thread.CurrentThread.Name);
 
-            return sCount + sTime + sThreadID + sThreadName + _name + ",";
+            return sCount + sTime + sThreadID + sThreadName + name + ",";
         }
 
-        private bool checkCapacity(int countQueued)
+        private static bool checkCapacity(int countQueued)
         {
             var prefix = "checkCapacity() - ";
 
@@ -262,13 +248,13 @@ namespace NZ01
             return true; // Queue message
         }
 
-        public bool WarnFlag(bool value)
+        public static bool WarnFlag(bool value)
         {
             _bLevelWarnPassed = value;
             return _bLevelWarnPassed;
         }
 
-        public bool ErrorFlag(bool value)
+        public static bool ErrorFlag(bool value)
         {
             _bLevelErrorPassed = value;
             return _bLevelErrorPassed;
@@ -279,13 +265,13 @@ namespace NZ01
         ///////////////////////////
         // Get/Set Warning Levels
 
-        public int ThresholdLevelWarn(int qSize)
+        public static int ThresholdLevelWarn(int qSize)
         {
             _thresholdLevelWarn = qSize;
             return _thresholdLevelWarn;
         }
 
-        public int ThresholdLevelWarn()
+        public static int ThresholdLevelWarn()
         { return _thresholdLevelWarn; }
 
         public int ThresholdLevelError(int qSize)
@@ -295,10 +281,10 @@ namespace NZ01
             return _thresholdLevelError;
         }
 
-        public int ThresholdLevelError()
+        public static int ThresholdLevelError()
         { return _thresholdLevelError; }
 
-        private void setQSizeFormatter()
+        private static void setQSizeFormatter()
         {
             double dLogTen = Math.Log10((double)_thresholdLevelError);
             int iLogTen = (int)Math.Ceiling(dLogTen);
@@ -307,7 +293,5 @@ namespace NZ01
             else
                 _qSizeFormatter = "D" + iLogTen.ToString(); // eg "D8"
         }
-
     }
-
 }
