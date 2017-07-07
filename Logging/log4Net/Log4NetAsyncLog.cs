@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -83,6 +83,7 @@ namespace NZ01
 
             _thread = new Thread(new ThreadStart(RunThread));
             _thread.Name = "Log4Net";
+            _thread.IsBackground = true; // Thread will be stopped like a pool thread if app is closed.
 
             _logger.Info(prefix + $"About to start Logging Thread...");
             _thread.Start();
