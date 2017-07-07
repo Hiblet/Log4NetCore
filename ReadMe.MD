@@ -104,11 +104,12 @@ Requires Log4Net module, available on NuGet.
  - Add "loggerFactory.AddLog4Net();" to Startup.Configure()
  - Add "NZ01.Log4NetAsyncLog.Stop();" to the end of Program.Main().  This is not critical, but it will gracefully terminate the log thread and write an exit message to the log.
  - Use Dependency Injection or direct static access to log messages that default to a file in ".\Logs"
+ - For Console Applications, the Logging\log4net\log4Net.config file will not be auto copied to the bin\Debug or bin\Release folder, so you need to examine the properties of the file in the Solution Explorer and set 'Copy to Output Directory' to 'Copy Always'.  This will create a Logging\log4net\log4Net.config file in the expected place.  If you miss this, you will get a fairly explanatory exception on first run.
  
 
 ### Dependency Injection (Slow)
 
-[Slow?: Do your own tests with a simple loop, but I found using ILogger was incredibly slow.  Logging 10000 text lines took 24 seconds.  The speed sludge is not in the local code or the Log4Net code either, because the Fast method below is a greasey whippet.]
+[Slow?: Do your own tests with a simple loop, but I found using ILogger was incredibly slow.  Logging 10000 text lines took 24 seconds.  The speed sludge is not in the local code or the Log4Net code either, because the Fast method below is a greasey whippet.  It is probably due to reflection, as the ILogger code records the class name.]
 
 In your controller or class that you wish to log from:
 
@@ -136,7 +137,7 @@ In your controller or class that you wish to log from:
  
 ### Direct (Fast)
 
-[Fast? Logging 10000 text lines in a loop with ILogger took 24 seconds, logging directly using this method was sub-second for all 10000 lines.  Seriously, something is currently wrong in ILogger, but no doubt MS will fix this, you know, sometime...]
+[Fast? Logging 10000 text lines in a loop with ILogger took 24 seconds, logging directly using this method was sub-second for all 10000 lines.]
 
  - In a member function you wish to log from, make direct static calls to standard Log4Net functions ie Debug/Info/Warn/Error/Fatal on the logger.  This still only loads the concurrent queue and therefore it is threadsafe.  The function names are replicated for convenience only.
  
@@ -183,6 +184,7 @@ I prefer too much info to too little, and the ability to switch the log level fo
 ### Stopping
 
 There is a static Stop() function that will gracefully stop the logging thread.
+The logging thread is set to be a background thread, which means it will be terminated by the OS if it is running when the application closes, and will not stop the app from closing.
 
 Web Apps in AspNetCore do not yet (June 2017) signal correctly that the app is stopping.
 Startup.Configure() is supposed to take an IApplicationLifetime parameter, and you can use this to register callback functions that are called when the application starts and stops.  
@@ -193,6 +195,7 @@ You can stop the thread in both Web Apps and Console Apps by making a call to th
 You do not have to do this, but calling this function writes a positive message to the log file and shows that the app exited gracefully.
 This can be useful for discriminating between crashes, and user-initiated exits.
 Failure to call to Stop() should not cause any problems, but you would lose this diagnostic element.
+There is the possibility that the logging thread is busy when the app is terminated, and the code is exposed to an exception at this point.  Therefore it is always preferrable to include the call to Stop() in Main().
 
 
 
@@ -208,4 +211,4 @@ Use as you see fit, but donate something to Second Chance Tasman Cats and Dogs H
 ## The Last Word
 
 Any bugs, let me know, I use this in anger so it would be good to have feedback.
-Angrily shoot me in the head as AvidFan on Destiny/XBox.
+Shoot me in the head as AvidFan on Destiny/XBox.
