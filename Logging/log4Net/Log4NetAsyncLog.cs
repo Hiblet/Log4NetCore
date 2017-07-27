@@ -275,7 +275,7 @@ namespace NZ01
         public static int ThresholdLevelWarn()
         { return _thresholdLevelWarn; }
 
-        public int ThresholdLevelError(int qSize)
+        public static int ThresholdLevelError(int qSize)
         {
             _thresholdLevelError = qSize;
             setQSizeFormatter();
