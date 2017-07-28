@@ -9,7 +9,7 @@ The code is thread-safe, and has a single dedicated logging thread for improved 
 
 ## Quick Start
 
- - NuGet Log4Net
+ - NuGet Log4Net and Microsoft.Extensions.Logging
  - Add this project's files to your project in a folder called 'Logging'
  - Add "using NZ01;" to your StartUp.cs class
  - Add "loggerFactory.AddLog4Net();" to StartUp.Configure()
@@ -21,6 +21,21 @@ The code is thread-safe, and has a single dedicated logging thread for improved 
  - Locate log file in ./Logs subdirectory.
  
 See Usage section below for details.
+
+
+
+## Example Project
+
+A simple Hello World type project has been included to illustrate usage.
+This project shows how to set up a Controller with logging, and how to make calls to log, via the Microsoft extensions, and directly without Microsoft Extensions 
+(see Log4NetCore.Controllers.HelloWorldController.Index() for the calls).
+
+Also, a controller is included that sets the Log4Net log level in the running.  This controller action illustrates making calls to set the log level.  
+Each call to the Index method causes a write to the log file at every level, so as you change the log level you should see the messages selectively filtered out.
+
+The config file sits in the Logging directory structure, so you have to right click the config file log4Net.config, and set 'CopyToOutput' to 'Always'.
+This ensures that the config file goes out with your deployment.  You could change the code to look for the log4Net config file at the application root if you want to, to avoid this.
+
 
 
 ## Design
@@ -98,7 +113,7 @@ Requires Log4Net module, available on NuGet.
 
 ## Usage
 
- - Add Log4Net using NuGet
+ - Add Log4Net and Microsoft.Extensions.Logging using NuGet
  - Add this project's files to your project in a folder like 'Logging'
  - Add "using NZ01;" to your Startup.cs class
  - Add "loggerFactory.AddLog4Net();" to Startup.Configure()
