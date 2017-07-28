@@ -1,0 +1,22 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.26430.6
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Log4NetCore", "Log4NetCore\Log4NetCore.csproj", "{148F7BE8-6856-42F7-BB51-D823C7B2761B}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{148F7BE8-6856-42F7-BB51-D823C7B2761B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{148F7BE8-6856-42F7-BB51-D823C7B2761B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{148F7BE8-6856-42F7-BB51-D823C7B2761B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{148F7BE8-6856-42F7-BB51-D823C7B2761B}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

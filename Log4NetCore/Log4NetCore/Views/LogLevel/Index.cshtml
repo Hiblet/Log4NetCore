@@ -1,0 +1,22 @@
+﻿
+@model LogLevelViewModel
+
+<div>
+    <label>Current Log Level: </label>@Model.LogLevelString (@Model.LogLevelInt)
+    <form method="post" asp-action="Change" asp-controller="LogLevel">
+        @foreach (var item in Model.LogLevels)
+        {
+            string itemId = "rbLogLevel" + item;
+            if (string.Equals(item, Model.LogLevelString, StringComparison.OrdinalIgnoreCase))
+            {
+                <input type="radio" name="rbLogLevel" value="@item" id="@itemId" checked="checked"> @item <br />
+            }
+            else
+            {
+                <input type="radio" name="rbLogLevel" value="@item" id="@itemId"> @item <br />
+            }
+        }
+        <br />
+        <input type="submit" />
+    </form>
+</div>
