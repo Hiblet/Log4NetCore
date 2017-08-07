@@ -7,7 +7,7 @@ using Microsoft.Extensions.Logging;
 
 namespace NZ01
 {
-    public static class Log4netExtensions
+    public static class Log4NetExtensions
     {
         public static int CountCalls_AddLog4Net { get; set; } = 0;
 
