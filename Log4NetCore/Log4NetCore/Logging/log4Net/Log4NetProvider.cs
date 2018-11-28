@@ -17,34 +17,45 @@ namespace NZ01
         private bool _bRunning = true;
 
         // DIAGS
-        public static int CountCalls_InstanceCtor { get; set; } = 0;
-        public static int CountCalls_CreateLogger { get; set; } = 0;
-        public static int CountCalls_Dispose { get; set; } = 0;
+        //public static int CountCalls_InstanceCtor { get; set; } = 0;
+        //public static int CountCalls_CreateLogger { get; set; } = 0;
+        //public static int CountCalls_Dispose { get; set; } = 0;
 
 
         // Ctor
-        public Log4NetProvider(string name)
+        public Log4NetProvider()
         {
-            ++CountCalls_InstanceCtor;
+            //++CountCalls_InstanceCtor;
         }
 
-        public ILogger CreateLogger(string categoryName)
+        /// <summary>
+        /// Create an instance of the Logger that holds the name of the class being logged.
+        /// </summary>
+        /// <param name="className"></param>
+        /// <returns></returns>
+        public ILogger CreateLogger(string className)
         {
-            ++CountCalls_CreateLogger;
+            //++CountCalls_CreateLogger;
 
             if (!_bRunning)
                 return null;
 
             Log4NetLogger logger = null;
-            if (!_registry.TryGetValue(categoryName, out logger))
-                logger = new Log4NetLogger(categoryName);
-
-            return logger;
+            if (_registry.TryGetValue(className, out logger))
+            {
+                return logger;
+            }
+            else
+            {
+                logger = new Log4NetLogger(className);
+                _registry.Add(className, logger);
+                return logger;
+            }            
         }
 
         public void Dispose()
         {
-            ++CountCalls_Dispose;
+            //++CountCalls_Dispose;
             _bRunning = false;
             _registry.Clear();
         }

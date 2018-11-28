@@ -25,9 +25,9 @@ namespace Log4NetCore.Controllers
         private readonly ILogger _logger;
         private readonly string _fnSuffix = "() - ";
 
-        public LogLevelController(ILogger<LogLevelController> logger)
+        public LogLevelController(ILoggerFactory loggerFactory)
         {
-            _logger = logger;
+            _logger = loggerFactory.CreateLogger<LogLevelController>();
         }
 
         [HttpGet]

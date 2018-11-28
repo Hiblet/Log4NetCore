@@ -16,9 +16,9 @@ namespace Log4NetCore.Controllers
     {
         private readonly ILogger _logger;
 
-        public HelloWorldController(ILogger<HelloWorldController> logger)
+        public HelloWorldController(ILoggerFactory loggerFactory)
         {
-            _logger = logger;
+            _logger = loggerFactory.CreateLogger<HelloWorldController>();
         }
 
         public ViewResult Index()
