@@ -29,8 +29,11 @@ namespace Log4NetCore
 
             app.UseMvc(routes =>
             {
-                routes.MapRoute(name: "controller-action", template: "{controller}/{action}"); // Exercise: http://localhost:64065/HelloWorld/Index or http://localhost:64065/LogLevel/Index
-                routes.MapRoute(name: "default", template: "{controller=HelloWorld}/{action=Index}"); // Exercise: http://localhost:64065
+                // Exercise: http://localhost:64065/HelloWorld/Index or http://localhost:64065/LogLevel/Index
+                routes.MapRoute(name: "controller-action", template: "{controller}/{action}");
+
+                // Exercise: http://localhost:64065
+                routes.MapRoute(name: "default", template: "{controller=HelloWorld}/{action=Index}"); 
             });
         }
     }

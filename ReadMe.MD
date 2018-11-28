@@ -7,20 +7,51 @@ AspNetCore uses dependency injection to provide logging, and this code implement
 The code is thread-safe, and has a single dedicated logging thread for improved performance.
 
 
+## Asp Net Core 2.1 MinLevel for Logging is Information
+
+By default, Asp Net Core 2.1 has the MinLevel for logging set to "Information".  
+That means that even if you set your config level to Debug, the logging of debug messages will still not happen.
+You would have to do this bit if you are using any third party logging kit, such as NLog or Serilog.
+
+To set the MinLevel for logging, call ConfigureLogging on the WebHostBuilder object, and pass it a delegate function as below:
+
+        public static IWebHost BuildWebHost(string[] args) =>
+            new WebHostBuilder()
+            .UseKestrel()
+            .UseContentRoot(Directory.GetCurrentDirectory())
+            .ConfigureAppConfiguration((hostContext, config) =>
+            {
+                config.SetBasePath(Directory.GetCurrentDirectory());
+                config.AddJsonFile("appSettings.json", optional: true, reloadOnChange: false);
+                config.AddEnvironmentVariables();
+            })
+            .ConfigureLogging((host, builder) =>
+            {
+                builder.SetMinimumLevel(LogLevel.Debug);
+            })
+            .UseIISIntegration()
+            .UseStartup<Startup>()
+            .Build();            
+
+
+This means all Debug and above messages will be passed to the logger, and then the Log4Net logger will decide whether to commit the message to file or not, dependent on it's own repository level setting.
+
+
 ## Quick Start
 
  - NuGet Log4Net and Microsoft.Extensions.Logging
  - Add this project's files to your project in a folder called 'Logging'
+ - Set the property "Copy to Output Directory" to "Copy Always" for file Logging\log4Net\log4Net.config
  - Add "using NZ01;" to your StartUp.cs class
  - Add "loggerFactory.AddLog4Net();" to StartUp.Configure()
  - Add "NZ01.Log4NetAsyncLog.Stop();" to the end of Program.Main()
  - In your class to log, add a member variable of type ILogger.
- - In your class to log, populate the member variable using an instance ctor parameter.
- - In your class to log member function, call ILogger.Log<T> or ILogger.LogInformation() to write.
- - Consider direct logging in speed sensitive operations.
- - Locate log file in ./Logs subdirectory.
+ - In your class to log, in the ctor, pass in the ILoggerFactory (DI), use it to instantiate a new Logger, passing the logger the name of your class as a string.
+ - In your class to log member functions, call ILogger.Log<T> or ILogger.LogInformation() (or LogDebug(), LogWarning() etc)to write.
+ - Consider direct logging (Calling NZ01.Log4NetAsync.Debug() or .Warning() etc) in speed sensitive operations.
+ - Find your log file in ./Logs subdirectory, the directory should be created if it does not exist.
  
-See Usage section below for details.
+
 
 
 
@@ -38,14 +69,17 @@ This ensures that the config file goes out with your deployment.  You could chan
 
 
 
-## Design
+## Logger Design
 
-A single thread is established for the lifetime of the application.  
-The thread is used to consume objects that are stored on a concurrent queue.
+Rather than log directly to file, you log to a concurrent queue, and the queue is consumed on a separate thread.  
+This allows your other threads to get on with work, and means that logging to file does not have significant overhead.
+
+A single logging thread is established for the lifetime of the application.  
+The logging thread is used to consume objects that are stored on a concurrent queue.
 Event signalling is used so that the queue is only consumed when a new object is enqueued, which means there is no polling of the queue.
 
 Log entries created through the ILogger interface record the calling class.
-Log entries created directly through the static interface do not automatically log the class, and the class should be logged as part of the message.
+Log entries created directly through the static interface (via calls to NZ01.Log4NetAsyncLog.Debug() or .Warning() etc) do not automatically log the class, and the class should be logged as part of the message.
 
 The design aim was to provide logging which would not impact performance in any way, so that it could be turned on or off in-the-running without disturbing normal production operation.
 As only a single, dedicated thread is used, you will not get any thread starvation.
@@ -111,16 +145,6 @@ Requires Log4Net module, available on NuGet.
 
 
 
-## Usage
-
- - Add Log4Net and Microsoft.Extensions.Logging using NuGet
- - Add this project's files to your project in a folder like 'Logging'
- - Add "using NZ01;" to your Startup.cs class
- - Add "loggerFactory.AddLog4Net();" to Startup.Configure()
- - Add "NZ01.Log4NetAsyncLog.Stop();" to the end of Program.Main().  This is not critical, but it will gracefully terminate the log thread and write an exit message to the log.
- - Use Dependency Injection or direct static access to log messages that default to a file in ".\Logs"
- - For Console Applications, the Logging\log4net\log4Net.config file will not be auto copied to the bin\Debug or bin\Release folder, so you need to examine the properties of the file in the Solution Explorer and set 'Copy to Output Directory' to 'Copy Always'.  This will create a Logging\log4net\log4Net.config file in the expected place.  If you miss this, you will get a fairly explanatory exception on first run.
- 
 
 ### Dependency Injection (Slow)
 
@@ -131,19 +155,20 @@ In your controller or class that you wish to log from:
  - Add a member variable for the ILogger type:
        private readonly ILogger _logger;
        
- - Update the instance constructor for the class to take in an ILogger variable, and set the member variable:
-       public HelloWorldController(ILogger<HelloWorldController> logger) { _logger = logger; }
-       
+ - Update the instance constructor for the class to take in either an ILoggerFactory variable:
+       public MyController(ILoggerFactory loggerFactory)
+       { _logger = loggerFactory.CreateLogger<MyController>(); }
+                   
  - In a member function, call the standard logger interface functions:
  
        private void Boom()
        {
-           string wouldLogThis = "OMG Something Happened!";
+           string wouldLogThis = "Boom() - OMG Something Happened!";
 
-           // Using the MS simplified wrapper:
-           _logger.LogInformation(prefix + wouldLogThis);
+           // How to use the MS simplified wrapper:
+           _logger.LogInformation(wouldLogThis);
                 
-           // Using the MS primitive Log function, with custom formatter or lambda function, where ex would be a caught exception maybe
+           // How to use the MS primitive Log function, with custom formatter or lambda function, where ex would be a caught exception maybe:
            _logger.Log<string>(LogLevel.Debug, 0, wouldLogThis, null, ((x,ex) => x.ToString() + " " + ex.ToString()));
            _logger.Log<string>(LogLevel.Information, 0, wouldLogThis, null, NZ01.Log4NetLogger.MyOwnFormatter);
        }
@@ -159,9 +184,9 @@ In your controller or class that you wish to log from:
  
        private void Boom()
        {
-           string prefix = "MyClass.Boom(),";
-           
-           string wouldLogThis = "OMG Something Happened!";           
+       	   // Note: With direct logging calls, the logger does not know the class, so I include it in the logged text.
+       	   //       The fact that the class does not have to be reflected is what makes this method faster.
+           string wouldLogThis = "MyClass.Boom() - OMG Something Happened!";           
                      
            NZ01.Log4NetAsyncLog.Debug(prefix + wouldLogThis); 
        }
@@ -181,16 +206,18 @@ There are some diagnostics in the files to record the number of calls to various
 ### Queue size and Thread are Logged
 
 Note that the size of the queue is logged when the data is enqueued and dequeued.
-This can give you additional clues as to what is happening in the application.
+These are stored in the NQ and DQ values.  The NQ value is the size of the queue when the message was added.  The DQ value is the size of the queue when the message was de-queued to write it to the log file.
+Knowing this gives you additional diagnostics about what is going on in your app.
+If the queue is full, messages are just discarded, but it should be exceptionally rare that your app threads are able to add messages to the queue faster than they can be de-queued by a single dedicated thread.
 
-Also, the enqueuing thread is logged (the thread making the call to log), making this useful when trying to see what is happening on various simultaneous threads.
+Also, the enqueuing thread name/ID number is logged (the thread making the call to log), making this useful when trying to see what is happening on various simultaneous threads.
 
 
 ### In-The-Running Changes
 
 Log level can be changed whilst the app is running if you call the static NZ01.Log4NetManager.SetLogLevel() function.
 The idea is that you hook up an admin-only API action to this function, and pass a log level.  
-You can then shift from INFO to DEBUG log level with an API call, which you can, of course, trigger from a web page, or however you need.
+You can then shift from INFO to DEBUG log level with an API call, which you can, of course, trigger from a web page or PostMan message, or from a central management app, or however you need.
 
 What we have lost here is the Log4Net ability to set a log level per instance of Log4Net logger, and therefore an independent log threshold level per class.
 I prefer too much info to too little, and the ability to switch the log level for the whole app is something I prefer.
@@ -201,7 +228,7 @@ I prefer too much info to too little, and the ability to switch the log level fo
 There is a static Stop() function that will gracefully stop the logging thread.
 The logging thread is set to be a background thread, which means it will be terminated by the OS if it is running when the application closes, and will not stop the app from closing.
 
-Web Apps in AspNetCore do not yet (June 2017) signal correctly that the app is stopping.
+Web Apps in AspNetCore do not yet signal correctly that the app is stopping.
 Startup.Configure() is supposed to take an IApplicationLifetime parameter, and you can use this to register callback functions that are called when the application starts and stops.  
 However, MS have some kind of bug going on and the Stopping and Stopped callbacks do not fire.
 

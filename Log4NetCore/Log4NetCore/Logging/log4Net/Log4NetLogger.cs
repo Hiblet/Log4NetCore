@@ -10,24 +10,29 @@ namespace NZ01
 {
     public class Log4NetLogger : ILogger
     {
-        private string _name;
+        private string _className;
 
-        public static int CountCalls_InstanceCtor { get; set; } = 0;
-        public static int CountCalls_BeginScope { get; set; } = 0;
-        public static int CountCalls_IsEnabled { get; set; } = 0;
-        public static int CountCalls_Log { get; set; } = 0;
+        //public static int CountCalls_InstanceCtor { get; set; } = 0;
+        //public static int CountCalls_BeginScope { get; set; } = 0;
+        //public static int CountCalls_IsEnabled { get; set; } = 0;
+        //public static int CountCalls_Log { get; set; } = 0;
 
-        public Log4NetLogger(string name)
+        public Log4NetLogger(string className)
         {
-            ++CountCalls_InstanceCtor;
-            _name = name;
+            //++CountCalls_InstanceCtor;
+            _className = className;
         }
 
-        public IDisposable BeginScope<TState>(TState state) { ++CountCalls_BeginScope; return null; }
+        public IDisposable BeginScope<TState>(TState state)
+        {
+            //++CountCalls_BeginScope;
+            return null;
+        }
 
         public bool IsEnabled(LogLevel logLevel)
         {
-            ++CountCalls_IsEnabled;
+            //++CountCalls_IsEnabled;
+
             switch (logLevel)
             {
                 case LogLevel.Critical:
@@ -46,22 +51,9 @@ namespace NZ01
             }
         }
 
-        public static string MyFormatter<TState, Exception>(TState t, Exception ex)
-        {
-            StringBuilder sb = new StringBuilder();
-            sb.Append(t?.ToString());
-            sb.Append(" ");
-            if (ex != null)
-            {
-                sb.Append(ex.ToString());
-            }
-
-            return sb.ToString();
-        }
-
         public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception exception, Func<TState, Exception, string> formatter)
         {
-            ++CountCalls_Log;
+            //++CountCalls_Log;
 
             if (!IsEnabled(logLevel)) { return; }
 
@@ -69,9 +61,25 @@ namespace NZ01
 
             if (state != null || exception != null)
             {
-                Log4NetAsyncLog.Enqueue(logLevel, eventId, (object)state, exception, formatter, state.GetType(), _name);
+                Log4NetAsyncLog.Enqueue(
+                    logLevel, eventId, (object)state, exception, 
+                    formatter, state.GetType(), _className);
             }
         }
+
+        // Used in testing Log<T> method
+        public static string MyFormatter<TState, Exception>(TState t, Exception ex)
+        {
+            StringBuilder sb = new StringBuilder();
+            sb.Append(t?.ToString());
+            sb.Append(" ");
+
+            if (ex != null)
+                sb.Append(ex.ToString()); 
+
+            return sb.ToString();
+        }
+
     }
 }
 
