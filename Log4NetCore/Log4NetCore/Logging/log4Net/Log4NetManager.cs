@@ -36,6 +36,11 @@ namespace NZ01
             return lookupIntFromLogLevel(repository.Root.Level);
         }
 
+        public static string GetEnumeration()
+        {
+            return "[Debug=6,Info=5,Warn=4,Error=3,Fatal=2]";
+        }
+
         /// <summary>
         /// Set the log level as specified and signal that a change has occurred.
         /// </summary>
@@ -127,7 +132,18 @@ namespace NZ01
             }
         }
 
-
+        public static int ConvertStringLogLevelToInt(string sLevel)
+        {
+            switch (sLevel.Trim().ToUpper())
+            {
+                case "DEBUG": return 6;
+                case "INFO": case "INFORMATION": return 5;
+                case "WARN": case "WARNING": return 4;
+                case "ERROR": return 3;
+                case "FATAL": case "CRITICAL": return 2;
+                default: return -1;
+            }
+        }
     }
 
 }
